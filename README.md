@@ -99,6 +99,16 @@ npm run preview    # 仅静态预览，无实时占座
 
 公网临时链接通过 Cloudflare Quick Tunnel 指向 `npm run serve` 的 5200 端口。
 
+## 部署到 Cloudflare Pages
+
+- 连接 GitHub 仓库 `haoyangyuying/kongshan`；
+- 构建命令：`npm run build`；
+- 输出目录：`dist`；
+- Node 版本：22（Vite 7 需要 Node 20.19+）。
+
+注意：`server.mjs` 是本地 Node 服务，Cloudflare Pages 只托管静态站点，不会运行它。部署到 Pages 后，页面、3D、声音都正常，但蒲团占座会退化为单人模拟；要保留真人占座，需要另外部署 Node 服务并用命名隧道，或改成 Cloudflare Durable Object。
+
+
 需要 Node 20+。
 
 ## 项目结构
