@@ -1,0 +1,23 @@
+{
+  "name": "kongshan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "空山 · 一座随时可以进去的中国寺庙（WebGL 数字寺院）",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5199",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5200",
+    "serve": "node server.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.180.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5"
+  }
+}

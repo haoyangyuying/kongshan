@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.npmcache/
+shots/
+tools/
+.DS_Store
+*.log
