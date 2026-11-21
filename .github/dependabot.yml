@@ -4,10 +4,22 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    ignore:
+      # 这三个大版本需要单独迁移和回归，不自动开 PR
+      - dependency-name: vite
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: three
+      - dependency-name: "@types/three"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
+    ignore:
+      # 大版本升级需要单独确认 action 的破坏性变更
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

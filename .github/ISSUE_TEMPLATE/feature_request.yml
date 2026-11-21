@@ -1,0 +1,39 @@
+name: Feature request
+description: 提议一个符合空山气质的新动作或改进
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        空山优先做“身体先动、少菜单、不制造焦虑”的改动。请先说明它如何让这个地方更安静，而不是更热闹。
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你想要什么
+      description: 一句话描述
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: 为什么适合空山
+      description: 它解决什么问题？会不会变成任务、排行榜或社交压力？
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: 可能的实现方式
+      description: 可选。涉及哪些文件、是否需要新依赖/素材？
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: 边界
+      options:
+        - label: 不引入账号、聊天、排行榜或付费点
+          required: true
+        - label: 不引入未经授权的外部模型、音频、字体或追踪脚本
+          required: true

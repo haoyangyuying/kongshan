@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 先在线体验
+    url: https://kongshan.291540038.workers.dev/
+    about: 在提交 bug 前，先看看线上是否已经能复现。
+  - name: 安全报告
+    url: https://github.com/haoyangyuying/kongshan/security/advisories/new
+    about: 不要公开贴可利用细节，请走私密 Security Advisory。
