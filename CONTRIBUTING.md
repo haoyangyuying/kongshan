@@ -13,6 +13,16 @@ npm run serve     # http://127.0.0.1:5200，含占座服务
 
 需要 Node 20.19+（推荐 22）。
 
+## 浏览器冒烟测试
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+测试会构建项目并在本机 5200 端口启动服务。也可以用已安装的 Google Chrome 运行
+`PLAYWRIGHT_CHROMIUM_CHANNEL=chrome npm run test:e2e`。测试不需要音频输出。
+
 ## 提交前
 
 - `npm run build` 必须通过；

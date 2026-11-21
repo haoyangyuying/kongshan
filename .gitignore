@@ -13,3 +13,4 @@ tools/
 .cloudflared/
 .wrangler/
 coverage/
+test-results/
