@@ -463,7 +463,7 @@ export class Soundscape {
     const t0 = ctx.currentTime;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.03, t0 + 2.4);
+    g.gain.exponentialRampToValueAtTime(0.018, t0 + 2.4);
     g.connect(this.dry);
     g.connect(this.reverb);
 
@@ -495,7 +495,7 @@ export class Soundscape {
     lfo.type = 'sine';
     lfo.frequency.value = 0.19;
     const lg = ctx.createGain();
-    lg.gain.value = 0.011;
+    lg.gain.value = 0.007;
     lfo.connect(lg).connect(g.gain);
     lfo.start(t0);
     this.chantNodes.push(lfo);

@@ -62,6 +62,12 @@ export class UI {
   private chantTimer = 0;
   private chantKnockTimer = 0;
   private chantLineTimer = 0;
+  private chantVoiceAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  private chantVoiceOn = this.chantVoiceAvailable;
+  private chantVoiceTimer = 0;
+  private chantSpeechWatchdog = 0;
+  private chantSpeechSeq = 0;
+  private voiceMuted = true;
   private sutraCtx: CanvasRenderingContext2D | null = null;
   private sutraGuideCtx: CanvasRenderingContext2D | null = null;
   private drawing = false;
@@ -81,7 +87,7 @@ export class UI {
       'sutra-prev', 'sutra-next', 'sutra-clear', 'sutra-finish', 'sutra-close', 'toast',
       'chant', 'chant-setup', 'chant-session', 'chant-sutras', 'chant-durations',
       'chant-start', 'chant-cancel', 'chant-name', 'chant-timer', 'chant-bar',
-      'chant-line', 'chant-knocks', 'chant-fish', 'chant-end',
+      'chant-line', 'chant-knocks', 'chant-fish', 'chant-end', 'chant-voice',
       'joystick', 'joystick-knob', 'mobile-action', 'mobile-action-label', 'visit-count', 'intro-clock',
       'intro-sound', 'tool-sound',
     ];
@@ -117,6 +123,7 @@ export class UI {
     this.el['chant-cancel']?.addEventListener('click', () => this.cancelChant());
     this.el['chant-end']?.addEventListener('click', () => this.finishChant());
     this.el['chant-fish']?.addEventListener('click', () => this.knockChant());
+    this.el['chant-voice']?.addEventListener('click', () => this.toggleChantVoice());
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (!this.el.chant?.hidden) { if (this.chantRunning) this.finishChant(); else this.cancelChant(); }
@@ -172,6 +179,16 @@ export class UI {
   }
 
   syncSound(on: boolean) {
+    this.voiceMuted = !on;
+    if (this.chantRunning) {
+      if (!on) {
+        this.stopChantSpeech();
+        this.startChantFallback();
+      } else if (this.chantVoiceAvailable && this.chantVoiceOn) {
+        window.clearInterval(this.chantLineTimer);
+        this.speakChantLine();
+      }
+    }
     const label = on ? '声音开' : '声音关';
     document.querySelectorAll('.sound-toggle').forEach((b) => {
       b.setAttribute('aria-pressed', String(on));
@@ -776,6 +793,7 @@ export class UI {
     this.el['chant-session'].hidden = true;
     document.body.classList.add('chanting');
     this.renderChantSetup();
+    this.updateChantVoiceButton();
   }
 
   private renderChantSetup() {
@@ -824,9 +842,15 @@ export class UI {
     window.clearInterval(this.chantTimer);
     window.clearInterval(this.chantKnockTimer);
     window.clearInterval(this.chantLineTimer);
+    this.stopChantSpeech();
+    this.updateChantVoiceButton();
     this.chantTimer = window.setInterval(() => this.updateChantClock(), 250);
     this.chantKnockTimer = window.setInterval(() => this.knockChant(), 4200);
-    this.chantLineTimer = window.setInterval(() => this.updateChantLine(), 16000);
+    if (this.chantVoiceAvailable && this.chantVoiceOn && !this.voiceMuted) {
+      this.speakChantLine();
+    } else {
+      this.startChantFallback();
+    }
     window.setTimeout(() => { if (this.chantRunning) this.knockChant(); }, 1400);
   }
 
@@ -836,6 +860,86 @@ export class UI {
     const line = lines[this.chantLineIndex % lines.length];
     this.chantLineIndex += 1;
     if (this.el['chant-line']) this.el['chant-line'].textContent = line;
+  }
+
+  private updateChantVoiceButton() {
+    const b = this.el['chant-voice'];
+    if (!b) return;
+    b.hidden = !this.chantVoiceAvailable;
+    b.textContent = this.chantVoiceOn ? '人声 · 开' : '人声 · 关';
+    b.setAttribute('aria-pressed', String(this.chantVoiceOn));
+    b.title = this.chantVoiceAvailable ? '用浏览器自带中文语音朗读经文' : '此浏览器不支持语音合成';
+  }
+
+  private startChantFallback() {
+    window.clearInterval(this.chantLineTimer);
+    this.chantLineTimer = window.setInterval(() => this.updateChantLine(), 16000);
+  }
+
+  private stopChantSpeech() {
+    this.chantSpeechSeq += 1;
+    window.clearTimeout(this.chantVoiceTimer);
+    window.clearTimeout(this.chantSpeechWatchdog);
+    this.chantVoiceTimer = 0;
+    this.chantSpeechWatchdog = 0;
+    if (this.chantVoiceAvailable) {
+      try { window.speechSynthesis.cancel(); } catch { /* noop */ }
+    }
+  }
+
+  private speakChantLine() {
+    if (!this.chantRunning || !this.chantVoiceAvailable || !this.chantVoiceOn || this.voiceMuted) return;
+    const text = (this.el['chant-line']?.textContent || '').trim();
+    if (!text) return;
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const seq = ++this.chantSpeechSeq;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-CN';
+    utterance.rate = 0.8;
+    utterance.pitch = 0.95;
+    utterance.volume = 1;
+    const voices = synth.getVoices();
+    const zh = voices.find((v) => /^zh/i.test(v.lang)) || voices.find((v) => /Chinese|中文|普通话|Ting|Mei|Sin/i.test(v.name));
+    if (zh) utterance.voice = zh;
+    utterance.onend = () => {
+      window.clearTimeout(this.chantSpeechWatchdog);
+      if (seq !== this.chantSpeechSeq || !this.chantRunning || !this.chantVoiceOn || this.voiceMuted) return;
+      this.updateChantLine();
+      this.chantVoiceTimer = window.setTimeout(() => this.speakChantLine(), 1500);
+    };
+    utterance.onerror = () => {
+      window.clearTimeout(this.chantSpeechWatchdog);
+      if (seq !== this.chantSpeechSeq || !this.chantRunning) return;
+      this.chantVoiceTimer = window.setTimeout(() => {
+        if (!this.chantRunning) return;
+        this.updateChantLine();
+        this.speakChantLine();
+      }, 2500);
+    };
+    synth.speak(utterance);
+    window.clearTimeout(this.chantSpeechWatchdog);
+    this.chantSpeechWatchdog = window.setTimeout(() => {
+      if (seq !== this.chantSpeechSeq || !this.chantRunning || !this.chantVoiceOn || this.voiceMuted) return;
+      if (synth.speaking) return;
+      this.updateChantLine();
+      this.speakChantLine();
+    }, Math.max(9000, text.length * 420 + 3000));
+  }
+
+  toggleChantVoice() {
+    if (!this.chantVoiceAvailable) return;
+    this.chantVoiceOn = !this.chantVoiceOn;
+    this.updateChantVoiceButton();
+    if (!this.chantRunning) return;
+    if (this.chantVoiceOn && !this.voiceMuted) {
+      window.clearInterval(this.chantLineTimer);
+      this.stopChantSpeech();
+      this.speakChantLine();
+    } else {
+      this.stopChantSpeech();
+      this.startChantFallback();
+    }
   }
 
   private updateChantClock() {
@@ -875,6 +979,7 @@ export class UI {
     window.clearInterval(this.chantTimer);
     window.clearInterval(this.chantKnockTimer);
     window.clearInterval(this.chantLineTimer);
+    this.stopChantSpeech();
     this.el.chant.hidden = true;
     document.body.classList.remove('chanting');
     this.h.onChantEnd(minutes, knocks, elapsed, completed);

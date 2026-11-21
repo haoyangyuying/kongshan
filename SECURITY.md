@@ -19,13 +19,13 @@
 - 不要把 API Token、Cloudflare 证书、`.env` 或私钥提交到仓库。
 - 生产环境建议使用命名隧道或受控的反向代理，而不是把开发服务器直接暴露到公网。
 
-## 已知依赖提示
+## 依赖维护
 
-`ws@8.18.3` 存在上游 DoS 公告 [GHSA-96hv-2xvq-fx4p](https://github.com/advisories/GHSA-96hv-2xvq-fx4p)（微小分片导致内存耗尽），截至二〇二六年十一月没有可用修复版本。本项目已做以下缓解：
+当前生产依赖为 `three` 与 `ws@8.23.0`；`npm audit --omit=dev` 为 0 漏洞。请定期运行：
 
-- WebSocket `maxPayload: 1024`，单条消息不能任意增长；
-- `MAX_CLIENTS` 默认 200，可在环境变量里调低；
-- `ALLOWED_ORIGINS` 限制浏览器来源；
-- 建议在反向代理层加连接数/速率限制。
+```bash
+npm audit
+npm outdated
+```
 
-Dependabot 会在上游修复后提示升级。若你准备大规模公开部署，建议在代理层加限流，或改用受控的托管 WebSocket 服务。
+Dependabot 已配置为每周检查 npm 依赖。若引入新的 WebSocket/网络服务，请同时更新 `SECURITY.md` 和 `PRIVACY.md`。
