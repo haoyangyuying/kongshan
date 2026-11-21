@@ -104,6 +104,23 @@ npm run preview    # 仅静态预览，无实时占座
 
 公网临时链接通过 Cloudflare Quick Tunnel 指向 `npm run serve` 的 5200 端口。
 
+## 部署到 Cloudflare Workers
+
+当前 Cloudflare Workers Builds 的配置：
+
+| 项目 | 值 |
+| --- | --- |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Output directory | `dist` |
+| Node version | 22 或 24 |
+
+仓库根目录已经包含 `wrangler.jsonc` 和 `worker/index.js`：Worker 只负责把请求交给 `dist` 的静态资源，不再让 Wrangler 去改 Vite 配置。部署成功后地址是：
+
+`https://kongshan.<你的-workers子域>.workers.dev`
+
+同样的限制：Workers 静态资源不会运行 `server.mjs`，所以 `/ws` 占座会退回单人模拟。要真人占座，需要在这个 Worker 里加 Durable Object，或继续用 Node 服务 + 命名隧道。
+
 ## 部署到 Cloudflare Pages
 
 - 连接本 GitHub 仓库；
@@ -137,7 +154,9 @@ HOST=0.0.0.0 PORT=5200 ALLOWED_ORIGINS=https://你的域名 npm run serve
 
 ```
 kongshan/
-├── server.mjs                  # 静态站点 + WebSocket 占座 / 在线人数
+├── server.mjs                  # 本地 Node 静态站点 + WebSocket 占座 / 在线人数
+├── worker/index.js             # Cloudflare Workers 静态资源入口
+├── wrangler.jsonc              # Workers 构建 / 静态资源绑定
 ├── index.html                  # 开场、HUD、面板、经卷、静坐的 DOM 骨架
 ├── src/
 │   ├── main.ts                 # 渲染循环、输入、交互、存档、状态
