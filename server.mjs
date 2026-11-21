@@ -14,6 +14,34 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(__dirname, 'dist');
 const PORT = Number(process.env.PORT || 5200);
 const HOST = process.env.HOST || '127.0.0.1';
+const MAX_CLIENTS = Math.max(1, Math.min(1000, Number(process.env.MAX_CLIENTS || 200)));
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean),
+);
+
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
+
+function originAllowed(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  try {
+    const parsed = new URL(origin);
+    const host = String(req.headers.host || '').toLowerCase();
+    if (parsed.host.toLowerCase() === host) return true;
+    if (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') return true;
+    return ALLOWED_ORIGINS.has(parsed.origin);
+  } catch {
+    return false;
+  }
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -32,12 +60,20 @@ const MIME = {
 };
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  let pathname = decodeURIComponent(url.pathname);
+  let pathname;
+  try {
+    const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    res.writeHead(400, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('bad request');
+    return;
+  }
   if (pathname === '/') pathname = '/index.html';
-  const resolved = path.normalize(path.join(DIST, pathname));
-  if (!resolved.startsWith(DIST)) {
-    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+  const rel = pathname.replace(/^\/+/, '');
+  const resolved = path.resolve(DIST, rel);
+  if (resolved !== DIST && !resolved.startsWith(DIST + path.sep)) {
+    res.writeHead(403, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('forbidden');
     return;
   }
@@ -48,6 +84,7 @@ const server = http.createServer((req, res) => {
     }
     const ext = path.extname(file).toLowerCase();
     const headers = {
+      ...SECURITY_HEADERS,
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Cache-Control': file.includes(`${path.sep}assets${path.sep}`)
         ? 'public, max-age=31536000, immutable'
@@ -55,7 +92,7 @@ const server = http.createServer((req, res) => {
     };
     fs.readFile(file, (readErr, data) => {
       if (readErr) {
-        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.writeHead(404, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
         res.end('not found');
         return;
       }
@@ -73,7 +110,7 @@ seats[RESIDENT_SEAT] = 'resident';
 const clients = new Map();
 let nextId = 1;
 
-const wss = new WebSocketServer({ noServer: true });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 1024, perMessageDeflate: false });
 
 function broadcast(payload) {
   const text = JSON.stringify(payload);
@@ -102,8 +139,15 @@ function releaseSeat(id) {
 }
 
 server.on('upgrade', (req, socket, head) => {
-  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  if (url.pathname !== '/ws') {
+  let pathname;
+  try {
+    pathname = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
+  } catch {
+    socket.destroy();
+    return;
+  }
+  if (pathname !== '/ws' || !originAllowed(req)) {
+    socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
     socket.destroy();
     return;
   }
@@ -111,6 +155,10 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 wss.on('connection', (ws) => {
+  if (clients.size >= MAX_CLIENTS) {
+    ws.close(1013, 'temple-full');
+    return;
+  }
   const id = `v${nextId++}`;
   clients.set(id, { ws });
   ws.isAlive = true;
@@ -169,6 +217,17 @@ const heartbeat = setInterval(() => {
 }, 30000);
 wss.on('close', () => clearInterval(heartbeat));
 
-server.listen(PORT, HOST, () => {
-  console.log(`空山 server: http://${HOST}:${PORT}  (ws /ws)`);
+server.on('error', (err) => {
+  console.error('[kongshan] server error', err.message);
 });
+
+server.listen(PORT, HOST, () => {
+  console.log(`空山 server: http://${HOST}:${PORT}  (ws /ws, max ${MAX_CLIENTS} clients)`);
+});
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 2000).unref();
+  });
+}

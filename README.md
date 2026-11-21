@@ -1,5 +1,8 @@
 # 空山 · 一座随时可以进去的中国寺庙
 
+[![CI](https://github.com/haoyangyuying/kongshan/actions/workflows/ci.yml/badge.svg)](https://github.com/haoyangyuying/kongshan/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2f6f4e.svg)](LICENSE)
+
 > 山门常开，各自安静。  
 > 不必说话，也不必解释。点一炷香，敲三下木鱼，和陌生人一起，在大殿前坐一会儿。
 
@@ -97,19 +100,38 @@ npm run serve      # http://127.0.0.1:5200（静态站点 + 实时占座）
 npm run preview    # 仅静态预览，无实时占座
 ```
 
+需要 Node 20.19+（推荐 22）。
+
 公网临时链接通过 Cloudflare Quick Tunnel 指向 `npm run serve` 的 5200 端口。
 
 ## 部署到 Cloudflare Pages
 
-- 连接 GitHub 仓库 `haoyangyuying/kongshan`；
+- 连接本 GitHub 仓库；
 - 构建命令：`npm run build`；
 - 输出目录：`dist`；
 - Node 版本：22（Vite 7 需要 Node 20.19+）。
 
 注意：`server.mjs` 是本地 Node 服务，Cloudflare Pages 只托管静态站点，不会运行它。部署到 Pages 后，页面、3D、声音都正常，但蒲团占座会退化为单人模拟；要保留真人占座，需要另外部署 Node 服务并用命名隧道，或改成 Cloudflare Durable Object。
 
+## 开源
 
-需要 Node 20+。
+- 代码与原创意内容：**MIT**，见 [LICENSE](LICENSE)。
+- 第三方依赖与公有领域文本：见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- 隐私说明：[PRIVACY.md](PRIVACY.md)。
+- 安全问题请走私密渠道：[SECURITY.md](SECURITY.md)。
+- 欢迎一起修山：[CONTRIBUTING.md](CONTRIBUTING.md)。
+
+### 自己部署占座服务
+
+```bash
+npm run build
+HOST=0.0.0.0 PORT=5200 ALLOWED_ORIGINS=https://你的域名 npm run serve
+```
+
+`server.mjs` 默认只监听 `127.0.0.1`。放到公网时请放在反向代理之后，并用 `ALLOWED_ORIGINS` 限制来源；它没有账号体系，占座是匿名的，不要把它当成身份认证或敏感服务。
+
+仓库里不应包含任何 API Token、Cloudflare 证书、私钥或个人邮箱。如果你发现历史里有，请先清理历史再公开。
+
 
 ## 项目结构
 
