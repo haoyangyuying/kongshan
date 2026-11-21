@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "three": "^0.180.0",
-    "ws": "^8.18.3"
+    "ws": "^8.23.0"
   },
   "devDependencies": {
     "@types/three": "^0.180.0",
