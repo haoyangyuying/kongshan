@@ -6,6 +6,7 @@
 - [ws](https://github.com/websockets/ws) — MIT License
 - [Vite](https://vite.dev/) — MIT License
 - [TypeScript](https://www.typescriptlang.org/) — Apache-2.0 License
+- [Playwright](https://playwright.dev/)（浏览器测试）— Apache-2.0 License
 
 完整版本与许可证信息见 `package-lock.json` 及各依赖包内的 LICENSE。
 
